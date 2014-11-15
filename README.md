@@ -1,4 +1,4 @@
-zstore [![GoDoc](http://godoc.org/github.com/mdlayher/zstore?status.svg)](http://godoc.org/github.com/mdlayher/zstore)
+zstore [![Build Status](https://travis-ci.org/mdlayher/zstore.svg?branch=master)](https://travis-ci.org/mdlayher/zstore) [![GoDoc](http://godoc.org/github.com/mdlayher/zstore?status.svg)](http://godoc.org/github.com/mdlayher/zstore)
 ======
 
 Prototype, ZFS-based, object storage system, written in Go.  MIT Licensed.
