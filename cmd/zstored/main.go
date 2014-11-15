@@ -4,10 +4,16 @@ package main
 import (
 	"flag"
 	"log"
+	"net/http"
 	"os"
 	"runtime"
+	"strings"
+	"time"
 
 	"github.com/mdlayher/zstore/zfsutil"
+	"github.com/mdlayher/zstore/zstored/zstoredhttp"
+
+	"github.com/stretchr/graceful"
 )
 
 var (
@@ -76,5 +82,28 @@ func main() {
 		log.Fatalf("zpool %q unhealthy, status: %q; exiting now", zpool.Name, zpool.Health)
 	}
 
-	log.Println("listening", host)
+	// Receive errors from HTTP server
+	httpErrC := make(chan error, 1)
+	go func() {
+		// Configure HTTP server
+		httpServer := graceful.Server{
+			Timeout: 10 * time.Second,
+			Server: &http.Server{
+				Addr:    host,
+				Handler: zstoredhttp.NewServeMux(),
+			},
+		}
+
+		// Start listening on HTTP
+		log.Println("HTTP listening:", httpServer.Server.Addr)
+		httpErrC <- httpServer.ListenAndServe()
+	}()
+
+	// Check for HTTP server errors
+	if err := <-httpErrC; err != nil {
+		// Ignore error when shutting down
+		if !strings.Contains(err.Error(), "use of closed network connection") {
+			log.Fatalln("HTTP server error:", err)
+		}
+	}
 }
