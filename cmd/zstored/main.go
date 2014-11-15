@@ -29,7 +29,7 @@ func main() {
 	log.Printf("starting [pid: %d]", os.Getpid())
 
 	// Check if ZFS is enabled on this operating system
-	ok, err := zfsutil.Enabled()
+	ok, err := zfsutil.IsEnabled()
 	if err != nil {
 		// If not implemented, zstore currently does not run on the host
 		// operating system

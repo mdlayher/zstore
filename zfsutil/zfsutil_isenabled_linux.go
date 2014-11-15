@@ -6,8 +6,8 @@ import (
 	"os"
 )
 
-// Enabled verifies that the Linux ZFS kernel module is loaded.
-func Enabled() (bool, error) {
+// IsEnabled verifies that the Linux ZFS kernel module is loaded.
+func IsEnabled() (bool, error) {
 	// Verify that Linux ZFS kernel module is loaded by checking for ZFS
 	// virtual device
 	if _, err := os.Stat(linuxDevZFS); err != nil {
