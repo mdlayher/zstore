@@ -90,7 +90,7 @@ func main() {
 			Timeout: 10 * time.Second,
 			Server: &http.Server{
 				Addr:    host,
-				Handler: zstoredhttp.NewServeMux(),
+				Handler: zstoredhttp.NewServeMux(zpool),
 			},
 		}
 
