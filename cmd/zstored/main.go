@@ -1,4 +1,4 @@
-// Command zstored provides a prototype, ZFS-based, object storage daemon.
+// Command zstored provides a prototype, ZFS-based, block storage provisioning daemon.
 package main
 
 import (
