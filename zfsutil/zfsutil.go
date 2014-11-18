@@ -4,6 +4,7 @@ package zfsutil
 import (
 	"errors"
 	"fmt"
+	"strings"
 
 	"gopkg.in/mistifyio/go-zfs.v1"
 )
@@ -12,10 +13,15 @@ const (
 	// linuxDevZFS is the name of the Linux ZFS virtual device
 	linuxDevZFS = "/dev/zfs"
 
-	// ZpoolName is the name of the ZFS zpool which zstored manages
+	// DatasetVolume is the type reported for a ZFS volume.
+	// TODO(mdlayher): replace with zfs.DatasetVolume constant once new stable
+	// TODO(mdlayher): go-zfs release is tagged
+	DatasetVolume = "volume"
+
+	// ZpoolName is the name of the ZFS zpool which zstored manages.
 	ZpoolName = "zstore"
 
-	// ZpoolOnline is the status reported when a zpool is online and healthy
+	// ZpoolOnline is the status reported when a zpool is online and healthy.
 	// TODO(mdlayher): replace with zfs.ZpoolOnline constant once new stable
 	// TODO(mdlayher): go-zfs release is tagged
 	ZpoolOnline = "ONLINE"
@@ -53,6 +59,20 @@ func IsZpoolNotExists(err error) bool {
 
 	// Check for specific error string from stderr
 	return zErr.Stderr == fmt.Sprintf("cannot open '%s': no such pool\n", ZpoolName)
+}
+
+// IsDatasetNotExists determines if an input error is caused by the necessary
+// ZFS dataset not existing.
+func IsDatasetNotExists(err error) bool {
+	// Check for ZFS error
+	zErr, ok := err.(*zfs.Error)
+	if !ok {
+		// Not a ZFS error at all
+		return false
+	}
+
+	// Check for tail end of error string
+	return strings.Contains(zErr.Stderr, "dataset does not exist\n")
 }
 
 // Zpool returns the designated zpool for zstored operations.
