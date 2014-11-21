@@ -43,8 +43,9 @@ func (c *StorageContext) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 	// Map of HTTP methods to the appropriate StorageHandlerFunc
 	methodFnMap := map[string]StorageHandlerFunc{
-		"GET": c.GetVolumeMetadata,
-		"PUT": c.CreateVolume,
+		"DELETE": c.DestroyVolume,
+		"GET":    c.GetVolumeMetadata,
+		"PUT":    c.CreateVolume,
 	}
 
 	// Check for a valid StorageHandlerFunc, 405 if none found
@@ -84,6 +85,35 @@ func (c *StorageContext) VolumeName(r *http.Request) (string, error) {
 		fmt.Sprintf("%x", md5.Sum([]byte(host))),
 		path.Base(r.URL.Path),
 	), nil
+}
+
+// DestroyVolume is a StorageHandlerFunc which destroys a volume via
+// the HTTP server.
+func (c *StorageContext) DestroyVolume(name string, r *http.Request) (int, []byte, error) {
+	// Check for a dataset which contains the specified name
+	zvol, err := zfs.GetDataset(name)
+	if err != nil {
+		// If dataset does not exist, 404
+		if zfsutil.IsDatasetNotExists(err) {
+			return http.StatusNotFound, nil, nil
+		}
+
+		// Any other errors
+		return http.StatusInternalServerError, nil, err
+	}
+
+	// Ensure that returned dataset is a volume
+	if zvol.Type != zfsutil.DatasetVolume {
+		return http.StatusNotFound, nil, nil
+	}
+
+	// Destroy the volume, and all recursive volumes
+	if err := zvol.Destroy(true); err != nil {
+		return http.StatusInternalServerError, nil, err
+	}
+
+	// Return HTTP 204 on success
+	return http.StatusNoContent, nil, nil
 }
 
 // GetVolumeMetadata is a StorageHandlerFunc which returns metadata for a
