@@ -134,7 +134,7 @@ func (c *StorageContext) GetVolumeMetadata(name string, r *http.Request) (int, [
 	// Return JSON representation of volume
 	body, err := json.Marshal(&Volume{
 		Name: name,
-		Size: zvol.Avail,
+		Size: zvol.Volsize,
 	})
 	return http.StatusOK, body, err
 }
@@ -175,7 +175,7 @@ func (c *StorageContext) CreateVolume(name string, r *http.Request) (int, []byte
 	// Return JSON representation of volume
 	body, err := json.Marshal(&Volume{
 		Name: name,
-		Size: zvol.Avail,
+		Size: zvol.Volsize,
 	})
 	return http.StatusCreated, body, err
 }
