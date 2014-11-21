@@ -32,7 +32,7 @@ func main() {
 	// Set up logging
 	log.SetFlags(log.Ldate | log.Ltime | log.Lshortfile)
 	log.SetPrefix("zstored: ")
-	log.Printf("starting [pid: %d]", os.Getpid())
+	log.Printf("starting [os: %s_%s] [pid: %d]", runtime.GOOS, runtime.GOARCH, os.Getpid())
 
 	// Check if ZFS is enabled on this operating system
 	ok, err := zfsutil.IsEnabled()
@@ -49,7 +49,7 @@ func main() {
 
 	// No error, but ZFS kernel module not loaded on this system
 	if !ok {
-		log.Fatal("ZFS kernel module not loaded")
+		log.Fatal("ZFS kernel module not loaded, exiting")
 	}
 
 	// Ensure that the necessary zpool is already in place, since building a zpool
@@ -58,12 +58,12 @@ func main() {
 	if err != nil {
 		// Check for permission denied
 		if zfsutil.IsZFSPermissionDenied(err) {
-			log.Fatalf("permission denied to ZFS virtual device, please run as root")
+			log.Fatalf("permission denied to ZFS virtual device, exiting")
 		}
 
 		// Check for zpool not exists
 		if zfsutil.IsZpoolNotExists(err) {
-			log.Fatalf("required zpool %q does not exist, please create the zpool", zfsutil.ZpoolName)
+			log.Fatalf("required zpool %q does not exist, exiting", zfsutil.ZpoolName)
 		}
 
 		// All other errors
@@ -79,7 +79,7 @@ func main() {
 
 	// Ensure zpool is online
 	if zpool.Health != zfsutil.ZpoolOnline {
-		log.Fatalf("zpool %q unhealthy, status: %q; exiting now", zpool.Name, zpool.Health)
+		log.Fatalf("zpool %q unhealthy, status: %q; exiting", zpool.Name, zpool.Health)
 	}
 
 	// Receive errors from HTTP server
@@ -106,4 +106,6 @@ func main() {
 			log.Fatalln("HTTP server error:", err)
 		}
 	}
+
+	log.Println("graceful shutdown complete")
 }
