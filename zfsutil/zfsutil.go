@@ -10,8 +10,8 @@ import (
 )
 
 const (
-	// linuxDevZFS is the name of the Linux ZFS virtual device
-	linuxDevZFS = "/dev/zfs"
+	// fevZFS is the name of the FreeBSD or Linux ZFS virtual device
+	devZFS = "/dev/zfs"
 
 	// DatasetVolume is the type reported for a ZFS volume.
 	// TODO(mdlayher): replace with zfs.DatasetVolume constant once new stable
@@ -44,7 +44,7 @@ func IsZFSPermissionDenied(err error) bool {
 	}
 
 	// Check for specific error string from stderr
-	return zErr.Stderr == fmt.Sprintf("Unable to open %s: Permission denied.\n", linuxDevZFS)
+	return zErr.Stderr == fmt.Sprintf("Unable to open %s: Permission denied.\n", devZFS)
 }
 
 // IsZpoolNotExists determines if an input error is caused by the necessary

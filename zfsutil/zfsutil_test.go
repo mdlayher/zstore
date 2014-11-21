@@ -22,7 +22,7 @@ func TestIsZFSPermissionDenied(t *testing.T) {
 	tests := append(errTests(), &errorTest{
 		text: "ZFS error, permission denied",
 		err: &zfs.Error{
-			Stderr: fmt.Sprintf("Unable to open %s: Permission denied.\n", linuxDevZFS),
+			Stderr: fmt.Sprintf("Unable to open %s: Permission denied.\n", devZFS),
 		},
 		ok: true,
 	})

@@ -1,4 +1,4 @@
-// +build linux
+// +build freebsd linux
 
 package zfsutil
 
@@ -6,11 +6,11 @@ import (
 	"os"
 )
 
-// IsEnabled verifies that the Linux ZFS kernel module is loaded.
+// IsEnabled verifies that the FreeBSD or Linux ZFS kernel module is loaded.
 func IsEnabled() (bool, error) {
-	// Verify that Linux ZFS kernel module is loaded by checking for ZFS
+	// Verify that FreeBSD or Linux ZFS kernel module is loaded by checking for ZFS
 	// virtual device
-	if _, err := os.Stat(linuxDevZFS); err != nil {
+	if _, err := os.Stat(devZFS); err != nil {
 		// Module not loaded
 		if os.IsNotExist(err) {
 			return false, nil

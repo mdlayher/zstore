@@ -1,4 +1,4 @@
-// +build linux
+// +build freebsd linux
 
 package zfsutil
 
@@ -8,7 +8,7 @@ import (
 )
 
 // TestLinuxIsEnabled verifies that IsEnabled properly detects the presence or
-// absence of the ZFS virtual device on Linux operating systems.
+// absence of the ZFS virtual device on FreeBSD and Linux operating systems.
 func TestLinuxIsEnabled(t *testing.T) {
 	// Check function result immediately
 	enabled, err := IsEnabled()
@@ -17,10 +17,10 @@ func TestLinuxIsEnabled(t *testing.T) {
 	}
 
 	// Check for ZFS virtual device
-	_, err = os.Stat(linuxDevZFS)
+	_, err = os.Stat(devZFS)
 	if os.IsNotExist(err) {
 		if enabled {
-			t.Fatalf("could not find %q, but IsEnabled returned true", linuxDevZFS)
+			t.Fatalf("could not find %q, but IsEnabled returned true", devZFS)
 		}
 
 		return
@@ -33,6 +33,6 @@ func TestLinuxIsEnabled(t *testing.T) {
 
 	// Verify ZFS is enabled
 	if !enabled {
-		t.Fatalf("found %q, but IsEnabled returned false", linuxDevZFS)
+		t.Fatalf("found %q, but IsEnabled returned false", devZFS)
 	}
 }
