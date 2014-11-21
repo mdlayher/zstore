@@ -64,9 +64,9 @@ func (c *StorageContext) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 	// Map of HTTP methods to the appropriate StorageHandlerFunc
 	methodFnMap := map[string]StorageHandlerFunc{
-		"DELETE": c.DestroyVolume,
-		"GET":    c.GetVolumeMetadata,
-		"PUT":    c.CreateVolume,
+		"DELETE": c.destroyVolume,
+		"GET":    c.getVolumeMetadata,
+		"PUT":    c.createVolume,
 	}
 
 	// Check for a valid StorageHandlerFunc, 405 if none found
@@ -89,9 +89,9 @@ func (c *StorageContext) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	w.Write(body)
 }
 
-// DestroyVolume is a StorageHandlerFunc which destroys a volume via
+// destroyVolume is a StorageHandlerFunc which destroys a volume via
 // the HTTP server.
-func (c *StorageContext) DestroyVolume(name string, r *http.Request) (int, []byte, error) {
+func (c *StorageContext) destroyVolume(name string, r *http.Request) (int, []byte, error) {
 	// Check for a dataset which contains the specified name
 	zvol, err := zfs.GetDataset(name)
 	if err != nil {
@@ -118,9 +118,9 @@ func (c *StorageContext) DestroyVolume(name string, r *http.Request) (int, []byt
 	return http.StatusNoContent, nil, nil
 }
 
-// GetVolumeMetadata is a StorageHandlerFunc which returns metadata for a
+// getVolumeMetadata is a StorageHandlerFunc which returns metadata for a
 // volume from the HTTP server.
-func (c *StorageContext) GetVolumeMetadata(name string, r *http.Request) (int, []byte, error) {
+func (c *StorageContext) getVolumeMetadata(name string, r *http.Request) (int, []byte, error) {
 	// Check for a dataset which contains the specified name
 	zvol, err := zfs.GetDataset(name)
 	if err != nil {
@@ -180,9 +180,9 @@ func (c *StorageContext) GetVolumeMetadata(name string, r *http.Request) (int, [
 	return http.StatusOK, body, err
 }
 
-// CreateVolume is a StorageHandlerFunc which handles new volume creation
+// createVolume is a StorageHandlerFunc which handles new volume creation
 // for the HTTP server.
-func (c *StorageContext) CreateVolume(name string, r *http.Request) (int, []byte, error) {
+func (c *StorageContext) createVolume(name string, r *http.Request) (int, []byte, error) {
 	// Check for a dataset which contains the specified name
 	_, err := zfs.GetDataset(name)
 	if err == nil {
