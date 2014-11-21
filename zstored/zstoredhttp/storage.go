@@ -3,7 +3,9 @@ package zstoredhttp
 import (
 	"crypto/md5"
 	"encoding/json"
+	"errors"
 	"fmt"
+	"io"
 	"log"
 	"net"
 	"net/http"
@@ -14,6 +16,18 @@ import (
 
 	"gopkg.in/mistifyio/go-zfs.v1"
 )
+
+var (
+	// errInvalidSize is returned when an invalid size slug is selected
+	// for volume creation or resizing.
+	errInvalidSize = errors.New("invalid size slug")
+)
+
+// StorageRequest is a struct which represents a valid request to
+// the storage API.
+type StorageRequest struct {
+	Size string `json:"size"`
+}
 
 // StorageHandlerFunc is a function which accepts a volume name and HTTP
 // request, and returns a HTTP status code, body, and server error.
@@ -140,10 +154,20 @@ func (c *StorageContext) CreateVolume(name string, r *http.Request) (int, []byte
 		return http.StatusInternalServerError, nil, err
 	}
 
-	// Generate a volume with the specified name
-	// TODO(mdlayher): allow this size to be specified by user, from a limited
-	// list of available sizes
-	zvol, err := zfs.CreateVolume(name, 1024*1024*32, nil)
+	// Parse volume size from HTTP request
+	size, err := storageSize(r)
+	if err != nil {
+		// Check for invalid storage size slug
+		if err == errInvalidSize {
+			return http.StatusBadRequest, nil, nil
+		}
+
+		// Any other error
+		return http.StatusInternalServerError, nil, err
+	}
+
+	// Generate a volume with the specified name and size
+	zvol, err := zfs.CreateVolume(name, size, nil)
 	if err != nil {
 		return http.StatusInternalServerError, nil, err
 	}
@@ -173,4 +197,44 @@ func (c *StorageContext) volumeName(r *http.Request) (string, error) {
 		fmt.Sprintf("%x", md5.Sum([]byte(host))),
 		path.Base(r.URL.Path),
 	), nil
+}
+
+// storageSize returns a uint64 volume size after reading an input HTTP request
+// and parsing a size slug from the request.
+func storageSize(r *http.Request) (uint64, error) {
+	// Decode HTTP request body into StorageRequest
+	sr := new(StorageRequest)
+	if err := json.NewDecoder(r.Body).Decode(sr); err != nil {
+		// If no request body, return invalid size
+		if err == io.EOF {
+			return 0, errInvalidSize
+		}
+
+		return 0, err
+	}
+
+	// Common size constants for volume creation and resizing.
+	const (
+		MB = 1 * 1024 * 1024
+		GB = 1024 * MB
+	)
+
+	// Map of available slugs and uint64 sizes
+	storageSizeMap := map[string]uint64{
+		"256M": 256 * MB,
+		"512M": 512 * MB,
+		"1G":   1 * GB,
+		"2G":   2 * GB,
+		"4G":   4 * GB,
+		"8G":   8 * GB,
+	}
+
+	// Look up to check if size slug is valid
+	size, ok := storageSizeMap[sr.Size]
+	if !ok {
+		return 0, errInvalidSize
+	}
+
+	// Return size
+	return size, nil
 }
