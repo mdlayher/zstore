@@ -34,7 +34,7 @@ type StorageContext struct {
 // ServeHTTP delegates requests to the Context to the correct handlers.
 func (c *StorageContext) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	// Generate volume name based upon information from input HTTP request
-	name, err := c.VolumeName(r)
+	name, err := c.volumeName(r)
 	if err != nil {
 		log.Println(err)
 		http.Error(w, "internal server error", http.StatusInternalServerError)
@@ -66,25 +66,6 @@ func (c *StorageContext) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	// Return necessary code and body
 	w.WriteHeader(code)
 	w.Write(body)
-}
-
-// VolumeName uses HTTP server context and the current request to create a
-// volume name specific to this client.
-func (c *StorageContext) VolumeName(r *http.Request) (string, error) {
-	// Retrieve IP address from HTTP request
-	host, _, err := net.SplitHostPort(r.RemoteAddr)
-	if err != nil {
-		return "", err
-	}
-
-	// Create a bucketed storage volume name which is limited to the
-	// zstored zpool, a MD5'd IP address, and the user-specified
-	// volume name
-	return filepath.Join(
-		c.zpool.Name,
-		fmt.Sprintf("%x", md5.Sum([]byte(host))),
-		path.Base(r.URL.Path),
-	), nil
 }
 
 // DestroyVolume is a StorageHandlerFunc which destroys a volume via
@@ -173,4 +154,23 @@ func (c *StorageContext) CreateVolume(name string, r *http.Request) (int, []byte
 		Size: zvol.Avail,
 	})
 	return http.StatusCreated, body, err
+}
+
+// volumeName uses HTTP server context and the current request to create a
+// volume name specific to this client.
+func (c *StorageContext) volumeName(r *http.Request) (string, error) {
+	// Retrieve IP address from HTTP request
+	host, _, err := net.SplitHostPort(r.RemoteAddr)
+	if err != nil {
+		return "", err
+	}
+
+	// Create a bucketed storage volume name which is limited to the
+	// zstored zpool, a MD5'd IP address, and the user-specified
+	// volume name
+	return filepath.Join(
+		c.zpool.Name,
+		fmt.Sprintf("%x", md5.Sum([]byte(host))),
+		path.Base(r.URL.Path),
+	), nil
 }
