@@ -11,6 +11,7 @@ import (
 	"net/http"
 	"path"
 	"path/filepath"
+	"strings"
 
 	"github.com/mdlayher/zstore/zfsutil"
 
@@ -29,15 +30,21 @@ type StorageRequest struct {
 	Size string `json:"size"`
 }
 
-// StorageHandlerFunc is a function which accepts a volume name and HTTP
-// request, and returns a HTTP status code, body, and server error.
-type StorageHandlerFunc func(string, *http.Request) (int, []byte, error)
+// StorageResponse is a struct which represents a response from the
+// storage API.
+type StorageResponse struct {
+	Volumes []*Volume `json:"volumes"`
+}
 
 // Volume is the JSON representation of a block storage volume.
 type Volume struct {
 	Name string `json:"name"`
 	Size uint64 `json:"size"`
 }
+
+// StorageHandlerFunc is a function which accepts a volume name and HTTP
+// request, and returns a HTTP status code, body, and server error.
+type StorageHandlerFunc func(string, *http.Request) (int, []byte, error)
 
 // StorageContext provides shared members required for zstored storage
 // HTTP handlers.
@@ -126,15 +133,49 @@ func (c *StorageContext) GetVolumeMetadata(name string, r *http.Request) (int, [
 		return http.StatusInternalServerError, nil, err
 	}
 
-	// Ensure that returned dataset is a volume
+	// Check for request to list all child volumes, or single volume
+	if len(strings.Split(name, "/")) == 2 {
+		// Fetch child datasets which are also volumes
+		children, err := zvol.Children(1)
+		if err != nil {
+			return http.StatusInternalServerError, nil, err
+		}
+
+		// Generate output list of volumes
+		var volumes []*Volume
+		for _, c := range children {
+			// Skip any non-volume datasets
+			if c.Type != zfsutil.DatasetVolume {
+				continue
+			}
+
+			// Add volume to slice
+			volumes = append(volumes, &Volume{
+				Name: c.Name,
+				Size: c.Volsize,
+			})
+		}
+
+		// Return JSON representation of volumes
+		body, err := json.Marshal(&StorageResponse{
+			Volumes: volumes,
+		})
+		return http.StatusOK, body, err
+	}
+
+	// Else, single dataset; ensure that returned dataset is a volume
 	if zvol.Type != zfsutil.DatasetVolume {
 		return http.StatusNotFound, nil, nil
 	}
 
 	// Return JSON representation of volume
-	body, err := json.Marshal(&Volume{
-		Name: name,
-		Size: zvol.Volsize,
+	body, err := json.Marshal(&StorageResponse{
+		Volumes: []*Volume{
+			&Volume{
+				Name: name,
+				Size: zvol.Volsize,
+			},
+		},
 	})
 	return http.StatusOK, body, err
 }
@@ -195,7 +236,8 @@ func (c *StorageContext) volumeName(r *http.Request) (string, error) {
 	return filepath.Join(
 		c.zpool.Name,
 		fmt.Sprintf("%x", md5.Sum([]byte(host))),
-		path.Base(r.URL.Path),
+		// Strip API path prefix
+		path.Base(r.URL.Path[len(storageAPI):]),
 	), nil
 }
 
