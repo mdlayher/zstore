@@ -151,7 +151,7 @@ func (c *StorageContext) getVolumeMetadata(name string, r *http.Request) (int, [
 
 			// Add volume to slice
 			volumes = append(volumes, &Volume{
-				Name: c.Name,
+				Name: path.Base(c.Name),
 				Size: c.Volsize,
 			})
 		}
@@ -172,7 +172,7 @@ func (c *StorageContext) getVolumeMetadata(name string, r *http.Request) (int, [
 	body, err := json.Marshal(&StorageResponse{
 		Volumes: []*Volume{
 			&Volume{
-				Name: name,
+				Name: path.Base(name),
 				Size: zvol.Volsize,
 			},
 		},
