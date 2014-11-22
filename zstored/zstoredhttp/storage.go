@@ -255,28 +255,11 @@ func storageSize(r *http.Request) (uint64, error) {
 		return 0, err
 	}
 
-	// Common size constants for volume creation and resizing.
-	const (
-		MB = 1 * 1024 * 1024
-		GB = 1024 * MB
-	)
-
-	// Map of available slugs and uint64 sizes
-	storageSizeMap := map[string]uint64{
-		"256M": 256 * MB,
-		"512M": 512 * MB,
-		"1G":   1 * GB,
-		"2G":   2 * GB,
-		"4G":   4 * GB,
-		"8G":   8 * GB,
-	}
-
-	// Look up to check if size slug is valid
-	size, ok := storageSizeMap[sr.Size]
+	// Check if slug is valid, return size
+	size, ok := zfsutil.SlugSize(sr.Size)
 	if !ok {
 		return 0, errInvalidSize
 	}
 
-	// Return size
-	return size, nil
+	return uint64(size), nil
 }

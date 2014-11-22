@@ -75,6 +75,29 @@ func IsDatasetNotExists(err error) bool {
 	return strings.Contains(zErr.Stderr, "dataset does not exist\n")
 }
 
+// SlugSize checks if an input slug string is a valid size constant for
+// zstore, and returns the size if possible.
+func SlugSize(slug string) (int64, bool) {
+	// Common size constants for volume creation and resizing.
+	const (
+		MB = 1 * 1024 * 1024
+		GB = 1024 * MB
+	)
+
+	// Map of available slugs and int64 sizes
+	storageSizeMap := map[string]int64{
+		"256M": 256 * MB,
+		"512M": 512 * MB,
+		"1G":   1 * GB,
+		"2G":   2 * GB,
+		"4G":   4 * GB,
+		"8G":   8 * GB,
+	}
+
+	size, ok := storageSizeMap[slug]
+	return size, ok
+}
+
 // Zpool returns the designated zpool for zstored operations.
 func Zpool() (*zfs.Zpool, error) {
 	return zfs.GetZpool(ZpoolName)
