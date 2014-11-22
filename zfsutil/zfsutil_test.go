@@ -55,6 +55,46 @@ func TestIsZpoolNotExists(t *testing.T) {
 	}
 }
 
+// TestIsDatasetNotExists verifies that ZFS zstore dataset not found errors are
+// properly detected.
+func TestIsDatasetNotExists(t *testing.T) {
+	// Try all common failure tests, add one successful test
+	tests := append(errTests(), &errorTest{
+		text: "ZFS error, dataset does not exist",
+		err: &zfs.Error{
+			Stderr: "dataset does not exist\n",
+		},
+		ok: true,
+	})
+
+	// Run all tests to check output
+	for _, test := range tests {
+		if ok := IsDatasetNotExists(test.err); ok != test.ok {
+			t.Fatalf("unexpected result: %v != %v [text: %s]", ok, test.ok, test.text)
+		}
+	}
+}
+
+// TestIsOutOfSpace verifies that ZFS zstore zpool out of space errors are
+// properly detected.
+func TestIsOutOfSpace(t *testing.T) {
+	// Try all common failure tests, add one successful test
+	tests := append(errTests(), &errorTest{
+		text: "ZFS error, zpool out of space",
+		err: &zfs.Error{
+			Stderr: "out of space\n",
+		},
+		ok: true,
+	})
+
+	// Run all tests to check output
+	for _, test := range tests {
+		if ok := IsOutOfSpace(test.err); ok != test.ok {
+			t.Fatalf("unexpected result: %v != %v [text: %s]", ok, test.ok, test.text)
+		}
+	}
+}
+
 // errTests returns some common errorTest values which should not register
 // as a specific type of ZFS error.
 func errTests() []*errorTest {
