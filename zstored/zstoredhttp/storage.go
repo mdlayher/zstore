@@ -215,6 +215,11 @@ func (c *StorageContext) createVolume(name string, r *http.Request) (int, []byte
 	// Generate a volume with the specified name and size
 	zvol, err := zfs.CreateVolume(name, size, nil)
 	if err != nil {
+		// Check for out of space error, return 503
+		if zfsutil.IsOutOfSpace(err) {
+			return http.StatusServiceUnavailable, nil, nil
+		}
+
 		return http.StatusInternalServerError, nil, err
 	}
 

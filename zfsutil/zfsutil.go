@@ -75,6 +75,20 @@ func IsDatasetNotExists(err error) bool {
 	return strings.Contains(zErr.Stderr, "dataset does not exist\n")
 }
 
+// IsOutOfSpace determines if an input error is caused by the zpool being too
+// full to process a volume creation request.
+func IsOutOfSpace(err error) bool {
+	// Check for ZFS error
+	zErr, ok := err.(*zfs.Error)
+	if !ok {
+		// Not a ZFS error at all
+		return false
+	}
+
+	// Check for tail end of error string
+	return strings.Contains(zErr.Stderr, "out of space\n")
+}
+
 // SlugSize checks if an input slug string is a valid size constant for
 // zstore, and returns the size if possible.
 func SlugSize(slug string) (int64, bool) {
