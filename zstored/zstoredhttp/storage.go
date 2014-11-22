@@ -183,6 +183,11 @@ func (c *StorageContext) getVolumeMetadata(name string, r *http.Request) (int, [
 // createVolume is a StorageHandlerFunc which handles new volume creation
 // for the HTTP server.
 func (c *StorageContext) createVolume(name string, r *http.Request) (int, []byte, error) {
+	// Ensure request name is bucketed to zpool, unique hash, and volume name
+	if len(strings.Split(name, "/")) != 3 {
+		return http.StatusMethodNotAllowed, nil, nil
+	}
+
 	// Check for a dataset which contains the specified name
 	_, err := zfs.GetDataset(name)
 	if err == nil {
