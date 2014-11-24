@@ -205,7 +205,7 @@ func (c *StorageContext) createVolume(name string, r *http.Request) (int, []byte
 	if err != nil {
 		// Check for invalid storage size slug
 		if err == errInvalidSize {
-			return http.StatusBadRequest, nil, nil
+			return http.StatusBadRequest, []byte(fmt.Sprintf("%s", zfsutil.Slugs())), nil
 		}
 
 		// Any other error

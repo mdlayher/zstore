@@ -54,7 +54,7 @@ func main() {
 	// Check for valid size slug
 	size, ok := zfsutil.SlugSize(s)
 	if !ok {
-		log.Fatalf("invalid size slug: %q", s)
+		log.Fatalf("invalid size slug: %q [sizes: %s]", s, zfsutil.Slugs())
 	}
 
 	// Check if the zstore zpool already exists
