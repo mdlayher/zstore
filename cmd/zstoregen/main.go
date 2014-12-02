@@ -9,6 +9,7 @@ import (
 	"os"
 	"runtime"
 
+	"github.com/mdlayher/zstore/storage"
 	"github.com/mdlayher/zstore/storage/zfsutil"
 
 	"gopkg.in/mistifyio/go-zfs.v2"
@@ -53,9 +54,9 @@ func main() {
 	}
 
 	// Check for valid size slug
-	size, ok := zfsutil.SlugSize(s)
+	size, ok := storage.SlugSize(s)
 	if !ok {
-		log.Fatalf("invalid size slug: %q [sizes: %s]", s, zfsutil.Slugs())
+		log.Fatalf("invalid size slug: %q [sizes: %s]", s, storage.Slugs())
 	}
 
 	// Check if the zstore zpool already exists

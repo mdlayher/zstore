@@ -14,7 +14,6 @@ import (
 	"strings"
 
 	"github.com/mdlayher/zstore/storage"
-	"github.com/mdlayher/zstore/storage/zfsutil"
 )
 
 var (
@@ -217,7 +216,7 @@ func (c *StorageContext) createVolume(name string, r *http.Request) (int, []byte
 	if err != nil {
 		// Check for invalid storage size slug
 		if err == errInvalidSize {
-			return http.StatusBadRequest, []byte(fmt.Sprintf("%s", zfsutil.Slugs())), nil
+			return http.StatusBadRequest, []byte(fmt.Sprintf("%s", storage.Slugs())), nil
 		}
 
 		// Any other error
@@ -282,7 +281,7 @@ func storageSize(r *http.Request) (uint64, error) {
 	}
 
 	// Check if slug is valid, return size
-	size, ok := zfsutil.SlugSize(sr.Size)
+	size, ok := storage.SlugSize(sr.Size)
 	if !ok {
 		return 0, errInvalidSize
 	}
