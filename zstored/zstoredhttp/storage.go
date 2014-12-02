@@ -65,7 +65,7 @@ func (c *StorageContext) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	methodFnMap := map[string]StorageHandlerFunc{
 		"DELETE": c.destroyVolume,
 		"GET":    c.getVolumeHandler,
-		"PUT":    c.createVolume,
+		"POST":   c.createVolume,
 	}
 
 	// Check for a valid StorageHandlerFunc, 405 if none found
@@ -197,7 +197,7 @@ func (c *StorageContext) getSingleVolumeMetadata(name string, r *http.Request) (
 func (c *StorageContext) createVolume(name string, r *http.Request) (int, []byte, error) {
 	// Ensure request name is bucketed to pool, unique hash, and volume name
 	if len(strings.Split(name, "/")) != 3 {
-		return http.StatusMethodNotAllowed, nil, nil
+		return http.StatusNotFound, nil, nil
 	}
 
 	// Check for a volume with the specified name
@@ -236,9 +236,13 @@ func (c *StorageContext) createVolume(name string, r *http.Request) (int, []byte
 	}
 
 	// Return JSON representation of volume
-	body, err := json.Marshal(&Volume{
-		Name: path.Base(volume.Name()),
-		Size: volume.Size(),
+	body, err := json.Marshal(&StorageResponse{
+		Volumes: []*Volume{
+			&Volume{
+				Name: path.Base(volume.Name()),
+				Size: volume.Size(),
+			},
+		},
 	})
 	return http.StatusCreated, body, err
 }
