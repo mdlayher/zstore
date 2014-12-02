@@ -9,8 +9,9 @@ import (
 	"os"
 	"runtime"
 
-	"github.com/mdlayher/zstore/zfsutil"
-	"gopkg.in/mistifyio/go-zfs.v1"
+	"github.com/mdlayher/zstore/storage/zfsutil"
+
+	"gopkg.in/mistifyio/go-zfs.v2"
 )
 
 var (

@@ -8,25 +8,15 @@ import (
 	"strconv"
 	"strings"
 
-	"gopkg.in/mistifyio/go-zfs.v1"
+	"gopkg.in/mistifyio/go-zfs.v2"
 )
 
 const (
 	// fevZFS is the name of the FreeBSD or Linux ZFS virtual device
 	devZFS = "/dev/zfs"
 
-	// DatasetVolume is the type reported for a ZFS volume.
-	// TODO(mdlayher): replace with zfs.DatasetVolume constant once new stable
-	// TODO(mdlayher): go-zfs release is tagged
-	DatasetVolume = "volume"
-
 	// ZpoolName is the name of the ZFS zpool which zstored manages.
 	ZpoolName = "zstore"
-
-	// ZpoolOnline is the status reported when a zpool is online and healthy.
-	// TODO(mdlayher): replace with zfs.ZpoolOnline constant once new stable
-	// TODO(mdlayher): go-zfs release is tagged
-	ZpoolOnline = "ONLINE"
 )
 
 // Common size constants for volume creation and resizing.

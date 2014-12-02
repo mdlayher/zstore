@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"testing"
 
-	"gopkg.in/mistifyio/go-zfs.v1"
+	"gopkg.in/mistifyio/go-zfs.v2"
 )
 
 // errorTest is a struct used for testing common error-checking functions.

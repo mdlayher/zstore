@@ -10,10 +10,12 @@ import (
 	"strings"
 	"time"
 
-	"github.com/mdlayher/zstore/zfsutil"
+	"github.com/mdlayher/zstore/storage"
+	"github.com/mdlayher/zstore/storage/zfsutil"
 	"github.com/mdlayher/zstore/zstored/zstoredhttp"
 
 	"github.com/stretchr/graceful"
+	"gopkg.in/mistifyio/go-zfs.v2"
 )
 
 var (
@@ -78,7 +80,7 @@ func main() {
 	log.Printf("zpool: %s [%s] [%03.3f / %03.3f GB, %03d%%]", zpool.Name, zpool.Health, allocGB, totalGB, percent)
 
 	// Ensure zpool is online
-	if zpool.Health != zfsutil.ZpoolOnline {
+	if zpool.Health != zfs.ZpoolOnline {
 		log.Fatalf("zpool %q unhealthy, status: %q; exiting", zpool.Name, zpool.Health)
 	}
 
@@ -90,7 +92,7 @@ func main() {
 			Timeout: 10 * time.Second,
 			Server: &http.Server{
 				Addr:    host,
-				Handler: zstoredhttp.NewServeMux(zpool),
+				Handler: zstoredhttp.NewServeMux(storage.NewZpool(zpool)),
 			},
 		}
 

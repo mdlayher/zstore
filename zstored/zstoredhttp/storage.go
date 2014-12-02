@@ -13,9 +13,8 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/mdlayher/zstore/zfsutil"
-
-	"gopkg.in/mistifyio/go-zfs.v1"
+	"github.com/mdlayher/zstore/storage"
+	"github.com/mdlayher/zstore/storage/zfsutil"
 )
 
 var (
@@ -49,7 +48,7 @@ type StorageHandlerFunc func(string, *http.Request) (int, []byte, error)
 // StorageContext provides shared members required for zstored storage
 // HTTP handlers.
 type StorageContext struct {
-	zpool *zfs.Zpool
+	pool storage.Pool
 }
 
 // ServeHTTP delegates requests to the Context to the correct handlers.
@@ -92,11 +91,11 @@ func (c *StorageContext) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 // destroyVolume is a StorageHandlerFunc which destroys a volume via
 // the HTTP server.
 func (c *StorageContext) destroyVolume(name string, r *http.Request) (int, []byte, error) {
-	// Check for a dataset which contains the specified name
-	zvol, err := zfs.GetDataset(name)
+	// Check for a volume with the specified name
+	volume, err := c.pool.Volume(name)
 	if err != nil {
-		// If dataset does not exist, 404
-		if zfsutil.IsDatasetNotExists(err) {
+		// If volume does not exist, 404
+		if err == storage.ErrVolumeNotExists {
 			return http.StatusNotFound, nil, nil
 		}
 
@@ -104,13 +103,8 @@ func (c *StorageContext) destroyVolume(name string, r *http.Request) (int, []byt
 		return http.StatusInternalServerError, nil, err
 	}
 
-	// Ensure that returned dataset is a volume
-	if zvol.Type != zfsutil.DatasetVolume {
-		return http.StatusNotFound, nil, nil
-	}
-
 	// Destroy the volume, and all recursive volumes
-	if err := zvol.Destroy(true); err != nil {
+	if err := volume.Destroy(); err != nil {
 		return http.StatusInternalServerError, nil, err
 	}
 
@@ -121,11 +115,11 @@ func (c *StorageContext) destroyVolume(name string, r *http.Request) (int, []byt
 // getVolumeMetadata is a StorageHandlerFunc which returns metadata for a
 // volume from the HTTP server.
 func (c *StorageContext) getVolumeMetadata(name string, r *http.Request) (int, []byte, error) {
-	// Check for a dataset which contains the specified name
-	zvol, err := zfs.GetDataset(name)
+	// Check for a volume with the specified name
+	volume, err := c.pool.Volume(name)
 	if err != nil {
-		// If dataset does not exist, 404
-		if zfsutil.IsDatasetNotExists(err) {
+		// If volume does not exist, 404
+		if err == storage.ErrVolumeNotExists {
 			return http.StatusNotFound, nil, nil
 		}
 
@@ -133,47 +127,12 @@ func (c *StorageContext) getVolumeMetadata(name string, r *http.Request) (int, [
 		return http.StatusInternalServerError, nil, err
 	}
 
-	// Check for request to list all child volumes, or single volume
-	if len(strings.Split(name, "/")) == 2 {
-		// Fetch child datasets which are also volumes
-		children, err := zvol.Children(1)
-		if err != nil {
-			return http.StatusInternalServerError, nil, err
-		}
-
-		// Generate output list of volumes
-		var volumes []*Volume
-		for _, c := range children {
-			// Skip any non-volume datasets
-			if c.Type != zfsutil.DatasetVolume {
-				continue
-			}
-
-			// Add volume to slice
-			volumes = append(volumes, &Volume{
-				Name: path.Base(c.Name),
-				Size: c.Volsize,
-			})
-		}
-
-		// Return JSON representation of volumes
-		body, err := json.Marshal(&StorageResponse{
-			Volumes: volumes,
-		})
-		return http.StatusOK, body, err
-	}
-
-	// Else, single dataset; ensure that returned dataset is a volume
-	if zvol.Type != zfsutil.DatasetVolume {
-		return http.StatusNotFound, nil, nil
-	}
-
 	// Return JSON representation of volume
 	body, err := json.Marshal(&StorageResponse{
 		Volumes: []*Volume{
 			&Volume{
-				Name: path.Base(name),
-				Size: zvol.Volsize,
+				Name: path.Base(volume.Name()),
+				Size: volume.Size(),
 			},
 		},
 	})
@@ -183,20 +142,20 @@ func (c *StorageContext) getVolumeMetadata(name string, r *http.Request) (int, [
 // createVolume is a StorageHandlerFunc which handles new volume creation
 // for the HTTP server.
 func (c *StorageContext) createVolume(name string, r *http.Request) (int, []byte, error) {
-	// Ensure request name is bucketed to zpool, unique hash, and volume name
+	// Ensure request name is bucketed to pool, unique hash, and volume name
 	if len(strings.Split(name, "/")) != 3 {
 		return http.StatusMethodNotAllowed, nil, nil
 	}
 
-	// Check for a dataset which contains the specified name
-	_, err := zfs.GetDataset(name)
+	// Check for a volume with the specified name
+	_, err := c.pool.Volume(name)
 	if err == nil {
 		// If no error, one already exists, so return 409
 		return http.StatusConflict, nil, nil
 	}
 
 	// For any other errors, return server error
-	if !zfsutil.IsDatasetNotExists(err) {
+	if err != storage.ErrVolumeNotExists {
 		return http.StatusInternalServerError, nil, err
 	}
 
@@ -213,10 +172,10 @@ func (c *StorageContext) createVolume(name string, r *http.Request) (int, []byte
 	}
 
 	// Generate a volume with the specified name and size
-	zvol, err := zfs.CreateVolume(name, size, nil)
+	volume, err := c.pool.CreateVolume(name, size)
 	if err != nil {
 		// Check for out of space error, return 503
-		if zfsutil.IsOutOfSpace(err) {
+		if err == storage.ErrPoolOutOfSpace {
 			return http.StatusServiceUnavailable, nil, nil
 		}
 
@@ -225,8 +184,8 @@ func (c *StorageContext) createVolume(name string, r *http.Request) (int, []byte
 
 	// Return JSON representation of volume
 	body, err := json.Marshal(&Volume{
-		Name: name,
-		Size: zvol.Volsize,
+		Name: path.Base(volume.Name()),
+		Size: volume.Size(),
 	})
 	return http.StatusCreated, body, err
 }
@@ -241,10 +200,10 @@ func (c *StorageContext) volumeName(r *http.Request) (string, error) {
 	}
 
 	// Create a bucketed storage volume name which is limited to the
-	// zstored zpool, a MD5'd IP address, and the user-specified
+	// zstored pool, a MD5'd IP address, and the user-specified
 	// volume name
 	return filepath.Join(
-		c.zpool.Name,
+		c.pool.Name(),
 		fmt.Sprintf("%x", md5.Sum([]byte(host))),
 		// Strip API path prefix
 		path.Base(r.URL.Path[len(storageAPI):]),

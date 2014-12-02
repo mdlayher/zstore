@@ -4,7 +4,7 @@ package zstoredhttp
 import (
 	"net/http"
 
-	"gopkg.in/mistifyio/go-zfs.v1"
+	"github.com/mdlayher/zstore/storage"
 )
 
 const (
@@ -13,12 +13,12 @@ const (
 )
 
 // NewServeMux returns a http.Handler for the zstored HTTP server.
-func NewServeMux(zpool *zfs.Zpool) http.Handler {
+func NewServeMux(pool storage.Pool) http.Handler {
 	// Set up HTTP handlers
 	mux := http.NewServeMux()
 	//   - Storage provisioning API
 	mux.Handle(storageAPI, &StorageContext{
-		zpool: zpool,
+		pool: pool,
 	})
 
 	return mux
