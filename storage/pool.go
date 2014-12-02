@@ -12,10 +12,6 @@ var (
 	// ErrPoolOutOfSpace is returned to callers when the underlying Pool no
 	// longer has the capacity to create a new volume.
 	ErrPoolOutOfSpace = errors.New("pool out of space")
-
-	// ErrVolumeNotExists is returned when an invalid volume name is provided
-	// by a caller.
-	ErrVolumeNotExists = errors.New("volume not found")
 )
 
 // Pool is a storage pool from which Volumes can be created.  Typically, this
@@ -27,15 +23,6 @@ type Pool interface {
 	CreateVolume(string, uint64) (Volume, error)
 	ListVolumes(string) ([]Volume, error)
 	Volume(string) (Volume, error)
-}
-
-// Volume is a block storage volume which is allocated from a Pool.  Typically,
-// this is a ZFS-based zvol.
-type Volume interface {
-	Name() string
-	Size() uint64
-
-	Destroy() error
 }
 
 // Zpool is a ZFS-backed implementation of Pool.  It enables creation of Zvols,
@@ -136,25 +123,4 @@ func NewZpool(zpool *zfs.Zpool) *Zpool {
 	return &Zpool{
 		zpool: zpool,
 	}
-}
-
-// Zvol is a ZFS-backed implementation of Volume.  It represents block storage
-// which may be allocated and released.
-type Zvol struct {
-	zvol *zfs.Dataset
-}
-
-// Destroy completely destroys this volume.
-func (z *Zvol) Destroy() error {
-	return z.zvol.Destroy(zfs.DestroyRecursive)
-}
-
-// Name returns the name of a ZFS zvol.
-func (z *Zvol) Name() string {
-	return z.zvol.Name
-}
-
-// Size returns the size of a ZFS zvol.
-func (z *Zvol) Size() uint64 {
-	return z.zvol.Volsize
 }
