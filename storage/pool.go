@@ -25,6 +25,7 @@ type Pool interface {
 	Name() string
 
 	CreateVolume(string, uint64) (Volume, error)
+	ListVolumes(string) ([]Volume, error)
 	Volume(string) (Volume, error)
 }
 
@@ -65,6 +66,44 @@ func (z *Zpool) CreateVolume(name string, size uint64) (Volume, error) {
 	return &Zvol{
 		zvol: zvol,
 	}, nil
+}
+
+// ListVolumes returns a list of all volumes which belong in the specified bucket,
+// typically by user.
+func (z *Zpool) ListVolumes(bucket string) ([]Volume, error) {
+	// Attempt to retrieve 'root' dataset for user
+	root, err := zfs.GetDataset(bucket)
+	if err != nil {
+		// If dataset does not exist, return not exists
+		if zfsutil.IsDatasetNotExists(err) {
+			return nil, ErrVolumeNotExists
+		}
+
+		// All other errors
+		return nil, err
+	}
+
+	// Fetch child datasets which are also volumes
+	children, err := root.Children(1)
+	if err != nil {
+		return nil, err
+	}
+
+	// Generate output list of volumes
+	var volumes []Volume
+	for _, c := range children {
+		// Skip any non-volume datasets
+		if c.Type != zfs.DatasetVolume {
+			continue
+		}
+
+		// Add volume to slice
+		volumes = append(volumes, &Zvol{
+			zvol: c,
+		})
+	}
+
+	return volumes, nil
 }
 
 // Volume attempts to retrieve a Zvol from a Zpool by its name.

@@ -64,7 +64,7 @@ func (c *StorageContext) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	// Map of HTTP methods to the appropriate StorageHandlerFunc
 	methodFnMap := map[string]StorageHandlerFunc{
 		"DELETE": c.destroyVolume,
-		"GET":    c.getVolumeMetadata,
+		"GET":    c.getVolumeHandler,
 		"PUT":    c.createVolume,
 	}
 
@@ -112,9 +112,62 @@ func (c *StorageContext) destroyVolume(name string, r *http.Request) (int, []byt
 	return http.StatusNoContent, nil, nil
 }
 
-// getVolumeMetadata is a StorageHandlerFunc which returns metadata for a
-// volume from the HTTP server.
-func (c *StorageContext) getVolumeMetadata(name string, r *http.Request) (int, []byte, error) {
+// getVolumeHandler is a StorageHandlerFunc which delegates to metadata handlers
+// for one or more volumes from the HTTP server.
+func (c *StorageContext) getVolumeHandler(name string, r *http.Request) (int, []byte, error) {
+	// Delegate to appropriate method
+	switch len(strings.Split(name, "/")) {
+	// List all volumes for user
+	case 2:
+		return c.getAllUserVolumeMetadata(name, r)
+	// List single volume for user
+	case 3:
+		return c.getSingleVolumeMetadata(name, r)
+	}
+
+	// Invalid request
+	return http.StatusNotFound, nil, nil
+}
+
+// getAllUserVolumeMetadata is a StorageHandlerFunc which returns metadata for all
+// volumes which belong to this user from the HTTP server.
+func (c *StorageContext) getAllUserVolumeMetadata(name string, r *http.Request) (int, []byte, error) {
+	// Ensure request is bucketed to pool and unique hash
+	if len(strings.Split(name, "/")) != 2 {
+		return http.StatusNotFound, nil, nil
+	}
+
+	// Attempt to fetch list of volumes for user; it is possible
+	// that the user has no volumes
+	volumes, err := c.pool.ListVolumes(name)
+	if err != nil && err != storage.ErrVolumeNotExists {
+		return http.StatusInternalServerError, nil, err
+	}
+
+	// Wrap all volumes in output format
+	out := make([]*Volume, len(volumes))
+	for i := range out {
+		out[i] = &Volume{
+			Name: path.Base(volumes[i].Name()),
+			Size: volumes[i].Size(),
+		}
+	}
+
+	// Return JSON representation of volumes
+	body, err := json.Marshal(&StorageResponse{
+		Volumes: out,
+	})
+	return http.StatusOK, body, err
+}
+
+// getSingleVolumeMetadata is a StorageHandlerFunc which returns metadata for a
+// single volume from the HTTP server.
+func (c *StorageContext) getSingleVolumeMetadata(name string, r *http.Request) (int, []byte, error) {
+	// Ensure request name is bucketed to pool, unique hash, and volume name
+	if len(strings.Split(name, "/")) != 3 {
+		return http.StatusNotFound, nil, nil
+	}
+
 	// Check for a volume with the specified name
 	volume, err := c.pool.Volume(name)
 	if err != nil {
